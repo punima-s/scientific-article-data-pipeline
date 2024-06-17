@@ -1,0 +1,16 @@
+__pycache__
+.ipynb_checkpoints
+venv/
+.pytest_cache
+
+.terraform
+
+.venv
+.env
+
+workshop*
+grid_data
+PubmedArticle.xml
+credentials.json
+institutes.csv
+token.json

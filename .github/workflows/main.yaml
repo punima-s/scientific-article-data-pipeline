@@ -1,0 +1,27 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+jobs:
+  quality_control:
+    name: "Quality Control"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout the code"
+        uses: actions/checkout@v4
+      - name: "Install Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - name: "Install all libraries"
+        run: |
+          pip3 install -r requirements.txt
+          echo "Done installing all libraries!"
+      - name: "Run Pytest"
+        run: pytest
+      - name: "Run PyLint"
+        run: pylint --fail-under=5 *.py

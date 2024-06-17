@@ -1,0 +1,15 @@
+FROM python:latest
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+RUN python -m spacy download en_core_web_sm
+
+COPY institutes.csv .
+COPY emailing.py .
+COPY extract_file.py .
+COPY process.py .
+COPY upload_file.py .
+COPY etl_pipeline.py .
+
+
+CMD python3 etl_pipeline.py

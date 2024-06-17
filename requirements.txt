@@ -1,0 +1,9 @@
+pytest
+pylint
+pandas
+spacy
+geonamescache
+rapidfuzz
+tabulate
+boto3
+python_dotenv
