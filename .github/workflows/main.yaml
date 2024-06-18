@@ -20,8 +20,10 @@ jobs:
       - name: "Install all libraries"
         run: |
           pip3 install -r requirements.txt
+          pip install numpy==1.26.4 spacy
+          python -m spacy download en_core_web_sm
           echo "Done installing all libraries!"
       - name: "Run Pytest"
         run: pytest
       - name: "Run PyLint"
-        run: pylint --fail-under=5 $(find . -name "*.py")
+        run: pylint --fail-under=8 $(find . -name "*.py")

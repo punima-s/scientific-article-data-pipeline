@@ -1,9 +1,8 @@
 pytest
 pylint
-pandas
-spacy
+pandas>=2.2
 geonamescache
 rapidfuzz
 tabulate
 boto3
-python_dotenv
+python-dotenv

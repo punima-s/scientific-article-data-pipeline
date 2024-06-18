@@ -26,6 +26,9 @@ For this project the pipeline is simple as the main focus is on optimising the d
 - github/workflows
   - github actions main.yaml
 
+- spacy_dwn.sh bash script
+  - temp fix while Numpy v2.0.0 breaks the ability to download models using spaCy
+
 - `pipeline` folder
   - python ETL pipeline
   - Sample data file
