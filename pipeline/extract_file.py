@@ -45,9 +45,11 @@ def extract_main():
     """Main run of function for extracting file. """
     s3 = get_s3_client()
     input_bucket = environ['INPUT_BUCKET']
-
-    file = get_objects(s3, input_bucket)
-    downloading_files(s3, input_bucket, file)
+    try:
+        file = get_objects(s3, input_bucket)
+        downloading_files(s3, input_bucket, file)
+    except ValueError:
+        return {"Error: No files in this bucket!"}
 
 
 if __name__ == "__main__":
