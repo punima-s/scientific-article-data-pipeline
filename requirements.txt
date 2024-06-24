@@ -1,6 +1,6 @@
 pytest
 pylint
-pandas>=2.2
+pandas
 geonamescache
 rapidfuzz
 tabulate

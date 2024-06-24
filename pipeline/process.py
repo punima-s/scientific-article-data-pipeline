@@ -17,130 +17,81 @@ def parse_xml_data(filepath: str) -> ET:
     return ET.parse(filepath)
 
 
-def get_total_article(root: ET) -> int:
-    """Returns the total number of articles."""
-    counter = 0
-    for child in root.findall('./'):
-        counter += 1
-    return counter
+def get_total_sub_tags(root: ET) -> int:
+    """Returns the total number of sub element in Element."""
+    return len(root) if root is not None else 0
 
 
-def get_total_author_for_article(article: ET) -> int:
-    """Returns the total number of authors in an article."""
-    author_count = 0
-    for child in article.findall('./MedlineCitation/Article/AuthorList/'):
-        author_count += 1 if child.tag == "Author" else 0
-    return author_count
-
-
-def get_title(article: ET) -> str:
-    """Get the title and year of an article."""
-    for child in article:
-        if child.tag == 'ArticleTitle':
-            return child.text
+def get_article_title(article_tag: ET.Element) -> str | None:
+    """Returns Article Title from Article Element. """
+    for info in article_tag.iterfind("./"):
+        if info.tag == 'ArticleTitle':
+            return info.text
     return None
 
 
-def get_year(article: ET) -> str:
-    """Get the year of an article."""
-    for child in article:
-        if child.tag == 'ArticleDate':
-            return child.find('./Year').text
+def get_article_year(article_tag: ET.Element) -> str | None:
+    """Returns Year from Article Date in Article Element. """
+    for date in article_tag.iterfind("./ArticleDate/"):
+        if date.tag == 'Year':
+            return date.text
     return None
 
 
-def get_pmid(article_root: ET) -> str:
-    """Get pmid from article in the pmid root"""
-    pmid = article_root.findall("./MedlineCitation/PMID")
-    if pmid is None:
-        return None
-    for val in pmid:
-        return val.text
+def get_article_data(root: ET.Element, index: int) -> dict:
+    """Returns Article Field from Article Element. """
+    article = root[index]
+    field = {'PMID': None,
+             'Title': None,
+             'Year': None,
+             'Keywords': None,
+             'MESH': None}
+
+    for v in article.iterfind("./MedlineCitation/"):
+        if v.tag == 'PMID':
+            field['PMID'] = v.text
+        if v.tag == 'Article':
+            field['Title'] = get_article_title(v)
+            field['Year'] = get_article_year(v)
+        if v.tag == 'KeywordList':
+            key_list = [word.text for word in v.iterfind(
+                "./") if word.tag == 'Keyword']
+            field['Keywords'] = key_list
+        if v.tag == 'MeshHeadingList':
+            mesh_list = [info.attrib['UI']
+                         for info in v.iterfind(".//") if info.tag == 'DescriptorName']
+            field['MESH'] = mesh_list
+    return field
 
 
-def get_keywords(article_root: ET) -> list:
-    """Get a list keywords from article. """
-    keyword_path = article_root.findall("./MedlineCitation/KeywordList/")
-    keywords = [words.text for words in keyword_path]
-    return keywords if keywords else None
+def get_author_data(root: ET.Element, article_index: int, author_index: int) -> dict:
+    """Return Author field from Article Element. """
+    field = {'Firstname': None,
+             'Lastname': None,
+             'Initials': None,
+             'GRID': [],
+             'Affiliation': []}
 
+    article = root[article_index]
+    author = article.find("./MedlineCitation/Article/AuthorList")[author_index]
 
-def get_mesh_ids(article_root: ET) -> list:
-    """Get a list of mesh ids from article."""
-    mesh_list = article_root.findall(
-        "./MedlineCitation/MeshHeadingList/MeshHeading/")
-    mesh_ids = [code.attrib['UI']
-                for code in mesh_list if re.match("D\d{6}", code.attrib['UI'])]
-    return mesh_ids if mesh_ids else None
+    for info in author.iterfind("./"):
+        if info.tag == 'ForeName':
+            field['Firstname'] = info.text
+        if info.tag == 'LastName':
+            field['Lastname'] = info.text
+        if info.tag == 'Initials':
+            field['Initials'] = info.text
+        if info.tag == 'AffiliationInfo':
+            for institute in info.iterfind("./"):
+                if institute.tag == "Affiliation":
+                    field['Affiliation'].append(institute.text)
+                if institute.tag == "Identifier" and institute.attrib['Source'] == 'GRID':
+                    field['GRID'].append(institute.text)
 
+    field['GRID'] = None if field['GRID'] == [] else field['GRID']
 
-def extract_article_detail(root: ET, position: int) -> dict:
-    """
-    Returns details about a specific article in the root: 
-    Title, Year, PMID, Keywords and MESH
-    """
-    new_root = root[position]
-
-    article = new_root.findall("./MedlineCitation/Article/")
-
-    return {'Title': get_title(article), 'Year': get_year(article),
-            'PMID': get_pmid(new_root), 'Keywords': get_keywords(new_root), 'MESH': get_mesh_ids(new_root)}
-
-
-def get_forename(author_path: ET) -> str:
-    """Get forename from Author tag."""
-    for child in author_path:
-        if child.tag == "ForeName":
-            return (child.text).strip()
-    return None
-
-
-def get_lastname(author_path: ET) -> str:
-    """Get lastname from Author tag."""
-    for child in author_path:
-        if child.tag == "LastName":
-            return (child.text).strip()
-    return None
-
-
-def get_initials(author_path: ET) -> str:
-    """Get initials from Author tag."""
-    for child in author_path:
-        if child.tag == "Initials":
-            return child.text
-    return None
-
-
-def get_affiliations(author_path: ET) -> list:
-    """Get affiliations of the author."""
-    affiliation = []
-    for child in author_path:
-        if child.tag == "AffiliationInfo":
-            affiliation.append((child.find("./Affiliation")).text)
-    return affiliation if affiliation else [None]
-
-
-def get_grid(author_path: ET) -> str:
-    """Get affiliations of the author."""
-    grid = None
-    for child in author_path:
-        if child.tag == "AffiliationInfo":
-            grid = child.find("./Identifier[@Source = 'GRID']")
-    return grid.text if grid is not None else None
-
-
-def extract_author_details(root: ET, position: int, author_index: int) -> dict:
-
-    new_root = root[position]
-
-    author_info = new_root.findall(
-        "./MedlineCitation/Article/AuthorList/Author")[author_index]
-
-    return {"forename": get_forename(author_info),
-            "lastname": get_lastname(author_info),
-            "initials": get_initials(author_info),
-            "identity": get_grid(author_info),
-            "affiliation": get_affiliations(author_info)}
+    return field
 
 
 def get_fullname(firstname: str, lastname: str) -> str:
@@ -152,8 +103,8 @@ def get_email(affiliation: str) -> str:
     """Get email from affiliation."""
     if affiliation is None:
         return None
-    email_struc_one = "([\w?\-\.|]+@[\w]+\.[\w]{2,3}\.[\w]{2})"
-    email_struc_two = "([\w?\-\.|]+@[\w]+\.[\w]{3})"
+    email_struc_one = r"([\w?\-\.|]+@[\w]+\.[\w]{2,3}\.[\w]{2})"
+    email_struc_two = r"([\w?\-\.|]+@[\w]+\.[\w]{3})"
     x = re.search(email_struc_one, affiliation)
     if x is None:
         x = re.search(email_struc_two, affiliation)
@@ -180,42 +131,47 @@ def get_country(affiliation, countries_info: dict, nlp_lang: spacy.Language) -> 
     return None
 
 
-def get_postcode(country: str, affiliation) -> str:
+def get_postcode(country: str, affiliation: str) -> str:
     """Search for postcode or zipcode in affiliation."""
     recognised_country = ["UK", "USA", "Canada"]
     if country not in recognised_country:
         return None
 
     if country == "UK":
-        code_regex = "(\w{1,2}\d{1,2}\s\d{1}\w{2})"
+        code_regex = r"(?<=[\s|a-z])([A-Z]{1,2}\d{1,2}\s\d{1}[A-Z]{2})"
     elif country == "USA":
-        code_regex = "(\d{5})"
+        code_regex = r"(?<!\d)(\d{5}(-{1}\d{4})?)(?!\d)"
     elif country == "Canada":
-        code_regex = "(\w\d\w\s\w\d\w)"
+        code_regex = r"(?<=[\s|a-z])([A-Z][0-9][A-Z]\s[0-9][A-Z][0-9])"
     else:
         return None
 
     x = re.search(code_regex, affiliation)
+
+    if country == "UK" and x is None:
+        x = re.search(
+            r"(?<=[\s|a-z])([A-Z]{1,2}\d{1}[A-Z]{1}\s\d{1}[A-Z]{2})", affiliation)
     return x.group() if x is not None else None
 
 
 def create_base_dataframe(root: ET, countries_data: dict, nlp_lang: spacy.Language, grid_institutes: list, match_limit: float) -> pd.DataFrame:
     """Creates a base dataframe of author and affiliations."""
-    number_of_article = get_total_article(root)
+    number_of_article = get_total_sub_tags(root)
     data_to_find = []
 
     for i in tqdm(range(number_of_article)):
 
-        article_info = extract_article_detail(root, i)
-        number_of_authors = get_total_author_for_article(root[i])
+        article_info = get_article_data(root, i)
+        author_list = root[i].find("./MedlineCitation/Article/AuthorList")
+        number_of_authors = get_total_sub_tags(author_list)
 
         for n in range(number_of_authors):
 
-            author_info = extract_author_details(root, i, n)
+            author_info = get_author_data(root, i, n)
 
             fullname = get_fullname(
-                author_info["forename"], author_info["lastname"])
-            affiliations = author_info['affiliation']
+                author_info["Firstname"], author_info["Lastname"])
+            affiliations = author_info['Affiliation']
 
             for affiliation in affiliations:
 
@@ -240,16 +196,16 @@ def create_base_dataframe(root: ET, countries_data: dict, nlp_lang: spacy.Langua
                     'Article_keywords': article_info["Keywords"],
                     'Article_MESH': article_info["MESH"],
                     'Article_year': article_info["Year"],
-                    'Author_firstname': author_info["forename"],
-                    'Author_lastname': author_info["lastname"],
-                    'Author_initials': author_info["initials"],
+                    'Author_firstname': author_info["Firstname"],
+                    'Author_lastname': author_info["Lastname"],
+                    'Author_initials': author_info["Initials"],
                     'Author_fullname': fullname,
                     'Author_email': email,
                     'Affiliation_name_PubMed': affiliation,
                     'Affiliation_name_GRID': grid_aff_name,
                     'Affiliation_zipcode': postcode,
                     'Affiliation_country': country,
-                    'Affiliation_GRID_identifier': author_info["identity"]
+                    'Affiliation_GRID_identifier': author_info["GRID"]
                 })
 
     base_df = pd.DataFrame(data=data_to_find)
@@ -324,7 +280,10 @@ def main(filename: str) -> pd.DataFrame:
     result = create_base_dataframe(
         root, countries_data, nlp, grid_institute_names, match_limit=MIN_MATCH_VAL)
 
-    return result.to_csv(f"Punima_{datetime.now().date()}_{datetime.now().minute}.csv", index=False)
+    result.to_csv(f"Punima_{datetime.now().date()}_{
+                  datetime.now().minute}.csv", index=False)
+
+    return result
 
 
 def get_filename() -> str:
@@ -345,20 +304,4 @@ def process_main():
 
 
 if __name__ == "__main__":
-    # testing on sample.txt
-    # tree = parse_xml_data("sample.xml")
-    # root = tree.getroot()
-
-    # countries_data = list_of_countries()
-    # nlp = spacy.load("en_core_web_sm")
-    # load_dotenv()
-
-    # grid_institute_names = load_grid_institute_names(
-    #     environ["GRID_INSTITUTE_FILEPATH"])
-    # MIN_MATCH_VAL = 0.9
-
-    # result = create_base_dataframe(
-    #     root, countries_data, nlp, grid_institute_names, match_limit=MIN_MATCH_VAL)
-    # print(result['Affiliation_GRID_identifier'].unique())
-
     main("sample.xml")

@@ -1,8 +1,8 @@
 """sends email notification."""
 from os import environ
-from dotenv import load_dotenv
 import smtplib
 from email.mime.text import MIMEText
+from dotenv import load_dotenv
 
 
 def sending_email(sender_email: str, receiver_email: str, app_password: str, msg: MIMEText) -> None:
@@ -43,8 +43,8 @@ def finished_task_message(sender_email: str, receiver_email: str, app_pw: str) -
 
 if __name__ == "__main__":
     load_dotenv()
-    sender_email = environ["EMAIL"]
-    receiver_email = "trainee.punima.shahi@sigmalabs.co.uk"
+    SENDER_EMAIL = environ["EMAIL"]
+    RECEIVER_EMAIL = "trainee.punima.shahi@sigmalabs.co.uk"
     # Use the app-specific password generated
-    app_password = environ["PASSWORD"]
+    APP_PASSWORD = environ["PASSWORD"]
     print(environ["EMAIL"])

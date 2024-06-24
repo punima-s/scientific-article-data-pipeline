@@ -7,12 +7,14 @@ from boto3 import client
 
 def get_s3_client() -> client:
     """Get client"""
-    return client("s3", aws_access_key_id=environ["AWS_ACCESS_KEY"], aws_secret_access_key=environ["AWS_SECRET_KEY"])
+    return client("s3", aws_access_key_id=environ["AWS_ACCESS_KEY"],
+                  aws_secret_access_key=environ["AWS_SECRET_KEY"])
 
 
 def get_objects(s3_cli: client, bucket_name: str) -> list[str]:
     """Only get objects from the bucket under the folder: "c11-punima/" """
-    return [(object['Key'], object['LastModified']) for object in s3_cli.list_objects(Bucket=bucket_name)['Contents']
+    return [(object['Key'], object['LastModified'])
+            for object in s3_cli.list_objects(Bucket=bucket_name)['Contents']
             if 'c11-punima/' in object['Key'] and object['Size'] != 0]
 
 
@@ -27,7 +29,6 @@ def generate_filename(date_value: datetime) -> str:
     Generate a format name for the latest file being downloaded.
     PubmedArticle_date_min.xml
     """
-
     return f"PubmedArticle_{date_value.date()}_{date_value.minute}_{date_value.second}.xml"
 
 
@@ -53,4 +54,5 @@ def extract_main():
 
 
 if __name__ == "__main__":
+    load_dotenv()
     extract_main()

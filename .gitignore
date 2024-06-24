@@ -12,5 +12,5 @@ workshop*
 grid_data
 PubmedArticle.xml
 credentials.json
-institutes.csv
+*.csv
 token.json

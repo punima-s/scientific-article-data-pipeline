@@ -1,6 +1,6 @@
 # Public Medical Articles Data Pipeline
 
-## A ETL pipeline that extracts Public Medical Articles and Matches Institute names using NLP and Data Matching
+## A ETL pipeline that extracts Public Medical Articles and matches Institute names using NLP and Data Matching
 In this project, I will extract an XML file of large number of Public Medical Articles and aim to convert the data into a flat csv format.
 
 Data format from XML to csv:
