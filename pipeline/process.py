@@ -1,3 +1,6 @@
+"""Process/Transformation: Convert XML to CSV"""
+from os import environ, remove
+import csv
 from datetime import datetime
 import xml.etree.ElementTree as ET
 import re
@@ -5,9 +8,7 @@ import glob
 import pandas as pd
 import spacy
 from geonamescache import GeonamesCache
-import csv
 from dotenv import load_dotenv
-from os import environ, remove
 from rapidfuzz import process, distance, utils
 from tqdm import tqdm
 
@@ -89,14 +90,14 @@ def get_author_data(root: ET.Element, article_index: int, author_index: int) -> 
                 if institute.tag == "Identifier" and institute.attrib['Source'] == 'GRID':
                     field['GRID'].append(institute.text)
 
-    field['GRID'] = None if field['GRID'] == [] else field['GRID']
+    field['GRID'] = None if not field['GRID'] else field['GRID']
 
     return field
 
 
 def get_fullname(firstname: str, lastname: str) -> str:
     """Joins firstname and lastname to return a fullname."""
-    return f"{firstname.capitalize()} {lastname.capitalize()}" if firstname is not None and lastname is not None else None
+    return f"{firstname.capitalize()} {lastname.capitalize()}" if (firstname is not None and lastname is not None) else None
 
 
 def get_email(affiliation: str) -> str:
@@ -184,11 +185,8 @@ def create_base_dataframe(root: ET, countries_data: dict, nlp_lang: spacy.Langua
                 postcode = get_postcode(
                     country, affiliation)
 
-                organisation_name = get_organisation_name(
-                    affiliation, nlp_lang)
-
-                grid_aff_name = get_matches(
-                    organisation_name, grid_institutes, match_limit)
+                grid_aff_name = get_organisation(
+                    affiliation, grid_institutes, nlp_lang, match_limit)
 
                 data_to_find.append({
                     'Article_PMID': article_info["PMID"],
@@ -221,29 +219,6 @@ def list_of_countries() -> dict:
         countries_list[country] = [
             countries[country]['name'], countries[country]['iso3'], countries[country]['fips']]
     return countries_list
-
-
-def get_organisation_name(affiliation: str, nlp_lang: spacy.Language) -> str:
-    """Get name of organisation name from affiliation"""
-    if affiliation is None:
-        return None
-    doc = nlp_lang(affiliation)
-    span = doc[0:len(doc)-1]
-    ents = list(span.ents)
-    org_entities = []
-    for entity in ents:
-        doc_1 = nlp_lang(entity.text)
-        entity_tk = 0
-        for token in doc_1:
-            entity_tk += 1 if token.ent_type_ == "ORG" else 0
-        if len(doc_1) == entity_tk:
-            org_entities.append(entity.text)
-    if org_entities is not None:
-        organisation = "".join(org_entities).split(
-            ",")
-        if len(organisation) > 1:
-            return organisation[-1]
-    return organisation[0] if organisation is not None else None
 
 
 def load_grid_institute_names(filepath: str):
@@ -303,5 +278,35 @@ def process_main():
         print("No new files")
 
 
+def is_ORG_or_FAC(entities: tuple) -> bool:
+    """Checks if ORG or FAC classified entity is within the entities of the Doc."""
+    for ent in entities:
+        if ent.label_ == "ORG" or ent.label_ == "FAC":
+            return True
+    return False
+
+
+def get_organisation(affiliation: str, institute_names: list, nlp_lang: spacy.Language, match_limit: float) -> str:
+    """Extracts the organisation/affiliation name and finds match to the institutes list. """
+    if affiliation is None:
+        return None
+
+    phrases = affiliation.strip().split(",")
+    orgs = []
+
+    for phrase in phrases:
+        doc = nlp_lang(phrase)
+        ents = doc.ents
+        if is_ORG_or_FAC(ents):
+            orgs.append(phrase.strip())
+
+    if orgs:
+        for i, entity in enumerate(orgs):
+            matches = get_matches(entity, institute_names, match_limit)
+            if matches or i == len(orgs) - 1:
+                return matches
+    return None
+
+
 if __name__ == "__main__":
-    main("sample.xml")
+    medical_institution = main("PubmedArticle.xml")
